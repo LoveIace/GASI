@@ -68,8 +68,19 @@ def roulette(population):
 
     print('ohnoooooooooooooooooooooooooooooooooooooooooooooooooo')
 
-def tournament(population):
-    pass
+def tournament(population, tournament_size = 3):
+    tournament = []
+    for i in range(tournament_size):
+        tournament.append(random.choice(population))
+    
+    max_fitness = float('-inf')
+    for participant in tournament:
+        if participant.fitness > max_fitness:
+            max_fitness = participant.fitness
+            victor = participant
+
+    return victor
+
 
 def main(pop_size, size):
 
@@ -84,7 +95,7 @@ def main(pop_size, size):
     counter = 0
     max_fitness = 0
 
-    while(counter < 10000):   
+    while(counter < 1000):   
         new_generation = []
 
         # evaluate fitness of each individual in current population 
@@ -98,8 +109,8 @@ def main(pop_size, size):
 
         for i in population:
             # select parents for new offspring
-            parent_A = roulette(population)
-            parent_B = roulette(population)
+            parent_A = tournament(population)
+            parent_B = tournament(population)
             offspring = Individual_HEF(parent_A=parent_A, parent_B=parent_B, offspring=True)
 
             new_generation.append(offspring)
