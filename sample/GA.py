@@ -14,12 +14,21 @@ class Individual_TSP:
         shuffle(self.genotype)
 
 class Individual_SLF:
-    def __init__(self, genotype_len):
+    def __init__(self, variables=None, parent_A=None, parent_B=None, offspring = False):
         self.fitness = None
-        self.genotype = array.array('B', [0]) * genotype_len
-        for i in range(genotype_len):
-            if random.random() < 0.5:
-                self.genotype[i] = 1
+
+        if offspring is False:
+            self.genotype = variables.copy()
+            for var in self.genotype:
+                if random.random() < 0.5:
+                    self.genotype[var] = True
+        else:
+            self.genotype = parent_A.genotype.copy()
+            for var in self.genotype:
+                if random.random() < 0.5:
+                    self.genotype[var] = parent_A.genotype[var]
+                else:
+                    self.genotype[var] = parent_B.genotype[var]
 
 class Individual_HEF:
 
@@ -68,7 +77,6 @@ def roulette(population):
     # getting the winning individual
     curr = 0
     for i in population:
-        print(curr, landing_spot)
         curr += i.fitness
         if curr >= landing_spot:
             return i
@@ -90,6 +98,7 @@ def tournament(population, tournament_size = None):
     return victor
 
 def is_true(formula, values):
+    fitness = 0
     for clause in formula.split("∧"):
         clause_truth_value = False
         for literal in clause.split("∨"):
@@ -97,13 +106,15 @@ def is_true(formula, values):
             if literal[0] == '¬':
                 if values[literal[1]] is False:
                     clause_truth_value = True
+                    fitness += 1
                     break
             elif values[literal[0]] is True:
                 clause_truth_value = True
+                fitness += 1
                 break
         if clause_truth_value is False:
-            return False
-    return True
+            return fitness
+    return fitness
 
 def function_extreme(function, population_size = 100, generation_ceiling = 100, interval_searched = (-100, 100), interval_initial = (-100, 100)):
 
@@ -150,9 +161,43 @@ def function_extreme(function, population_size = 100, generation_ceiling = 100, 
     df.to_csv('documentation/out.csv', index=False)  
             
 def satisfiability(formula, population_size = 100, generation_ceiling = 100):
-    print(is_true(formula, {'x':False, 'y':True, 'z':True}))
+    variables = {}
+    for char in formula:
+        if char.isalpha():
+            variables[char] = False
+
+    CLAUSULE_COUNT = formula.count("∧") + 1
+    population = []
+
+    for i in range(population_size):
+        population.append(Individual_SLF(variables))
+
+    generation_num = 1
+
+    while(generation_num <= generation_ceiling):  
+        print(generation_num)
+
+        for i in population:
+            i.fitness = is_true(formula, i.genotype)
+            if i.fitness == CLAUSULE_COUNT:
+                print("Solution for",formula, "found in", generation_num, "generations:", i.genotype)
+                return
+
+        new_generation = []
+        for i in population:
+                parent_A = roulette(population)
+                parent_B = roulette(population)
+                offspring = Individual_SLF(parent_A=parent_A, parent_B=parent_B, offspring=True)
+
+                new_generation.append(offspring)
+
+        population = new_generation.copy()
+        generation_num+=1
+    
+    
+
 
 # function_extreme('(x/40)**2 - (x/40)**3 - 10*(x/40)**4 + (y/40)**2 - (y/40)**3 - 10*(y/40)**4', 100, 100, (-10, 10))
 # ∨∧¬
 
-satisfiability('(¬x ∨ y) ∧ (¬y ∨ z) ∧ (x ∨ ¬z ∨ y)')
+satisfiability('a∧b∧c∧d∧e∧f∧g∧h∧i∧j∧k∧l∧m∧n∧o∧p∧q∧r∧s∧t∧u∧v', generation_ceiling=100)
