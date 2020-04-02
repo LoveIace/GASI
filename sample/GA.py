@@ -14,23 +14,52 @@ class Individual_TSP:
         shuffle(self.genotype)
 
 class Individual_SLF:
-    def __init__(self, variables=None, parent_A=None, parent_B=None, offspring = False):
-        self.fitness = None
+    def solved(self):
+        if self.CLAUSULE_COUNT == self.fitness:
+            return True
+        return False
 
-        if offspring is False:
-            self.genotype = variables.copy()
-            for var in self.genotype:
-                if random.random() < 0.5:
-                    self.genotype[var] = True
-        else:
+    def evaluate(self):
+        self.fitness = 0
+        for clause in self.formula.split("∧"):
+            for literal in clause.split("∨"):
+                literal = literal.strip("() ")
+                if literal[0] == '¬':
+                    if self.genotype[literal[1]] is False:
+                        self.fitness += 1
+                        break
+                elif self.genotype[literal] is True:
+                    self.fitness += 1
+                    break
+        return
+
+    def __init__(self, formula=None, clausules=None, variables=None, parent_A=None, parent_B=None, offspring = False):
+        self.fitness = None
+        self.CLAUSULE_COUNT = clausules
+        self.formula = formula
+
+        if offspring is True:
             self.genotype = parent_A.genotype.copy()
+            self.CLAUSULE_COUNT = parent_A.CLAUSULE_COUNT
+            self.formula = parent_A.formula
+
             for var in self.genotype:
                 if random.random() < 0.5:
                     self.genotype[var] = parent_A.genotype[var]
                 else:
                     self.genotype[var] = parent_B.genotype[var]
+        else:
+            self.genotype = variables.copy()
+            for var in self.genotype:
+                if random.random() < 0.5:
+                    self.genotype[var] = True
 
 class Individual_HEF:
+    def solved(self):
+        return False
+
+    def evaluate(self):
+        self.fitness = self.problem.subs(self.genotype)
 
     def crossover(self, a, b):
         return [a[0], (a[1]+b[1])/2]
@@ -45,12 +74,15 @@ class Individual_HEF:
             elif mutation_check < 0.25:
                 self.genotype[i][1] = np.clip(self.interval[0], self.interval[1], self.genotype[i][1]*0.9)
 
-    def __init__(self, variables=None, interval = (float('-inf'), float('inf')), parent_A=None, parent_B=None, offspring=False, mutate=True):
+    def __init__(self, problem=None, variables=None, interval = (float('-inf'), float('inf')), parent_A=None, parent_B=None, offspring=False, mutate=True):
         self.fitness = None
         self.genotype = []
         self.interval = interval
+        self.problem = problem
 
         if offspring is True:
+            self.interval = parent_A.interval
+            self.problem = parent_A.problem
             self.genotype = list(map(lambda x, y: self.crossover(x, y), parent_A.genotype, parent_B.genotype))
             if mutate is True:
                 self.mutate()
@@ -97,68 +129,15 @@ def tournament(population, tournament_size = None):
 
     return victor
 
-def is_true(formula, values):
-    fitness = 0
-    for clause in formula.split("∧"):
-        clause_truth_value = False
-        for literal in clause.split("∨"):
-            literal = literal.strip("() ")
-            if literal[0] == '¬':
-                if values[literal[1]] is False:
-                    clause_truth_value = True
-                    fitness += 1
-                    break
-            elif values[literal[0]] is True:
-                clause_truth_value = True
-                fitness += 1
-                break
-        if clause_truth_value is False:
-            return fitness
-    return fitness
-
-def function_extreme(function, population_size = 100, generation_ceiling = 100, interval_searched = (-100, 100), interval_initial = (-100, 100)):
+def function_extreme(function, population_size = 100, generation_ceiling = 100, interval = (float('-inf'), float('inf'))):
 
     fn = sp.sympify(function)
 
     population = []
     for i in range(population_size):
-        population.append(Individual_HEF(fn.free_symbols, interval = interval_initial))
+        population.append(Individual_HEF(fn, fn.free_symbols, interval = interval))
 
-    generation_num = 1
-    max_fitness = float('-inf')
-    data = []
-
-    # loop through generations
-    while(generation_num <= generation_ceiling):   
-        new_generation = []
-
-        # evaluate fitness of each individual in current population, add to dataset
-        for i in population:
-            i.fitness = fn.subs(i.genotype)
-            data.append([item for sublist in i.genotype for item in sublist] + [i.fitness, generation_num])
-
-            if i.fitness is None:
-                continue
-            if i.fitness > max_fitness:
-                best_sol = i
-                max_fitness = i.fitness
-
-        # select 2 parents, create offspring, repeat until new generation is complete
-        for i in population:
-            parent_A = tournament(population)
-            parent_B = tournament(population)
-            offspring = Individual_HEF(parent_A=parent_A, parent_B=parent_B, offspring=True, interval = interval_searched)
-
-            new_generation.append(offspring)
-
-        population = new_generation.copy()
-        generation_num+=1
-
-    # print best result
-    print(best_sol.genotype, best_sol.fitness)
-    df = pd.DataFrame(data) 
-
-    df.to_csv('documentation/out.csv', index=False)  
+    genetic_algo(population, population_size, generation_ceiling, tournament, Individual_HEF, out_path='documentation/hef_out.csv')
             
 def satisfiability(formula, population_size = 100, generation_ceiling = 100):
     variables = {}
@@ -167,37 +146,68 @@ def satisfiability(formula, population_size = 100, generation_ceiling = 100):
             variables[char] = False
 
     CLAUSULE_COUNT = formula.count("∧") + 1
+
+    # create initial population
     population = []
-
     for i in range(population_size):
-        population.append(Individual_SLF(variables))
+        population.append(Individual_SLF(formula, CLAUSULE_COUNT, variables))
 
+    genetic_algo(population, population_size, generation_ceiling, roulette, Individual_SLF, out_path= 'documentation/slf_out.csv')
+
+def add_entry(data, gen_num, genotype, fitness):
+    entry = []
+    entry.append(gen_num)
+    for genome in genotype:
+        entry.append(genotype[genome]) if isinstance(genotype,dict) else entry.append(genome[1])
+    entry.append(fitness)
+    data.append(entry)
+
+def columns(i):
+    if isinstance(i.genotype,dict):
+        return ['generation'] + list(i.genotype.keys()) + ['fitness']
+    else:
+        return ['generation'] + list(i.problem.free_symbols) + ['fitness']
+
+def genetic_algo(population, population_size, generation_ceiling, select, individual, elitism = True, out_path = False):
     generation_num = 1
+    max_fitness = float('-inf')
+    data = []
+    best_sol = None
 
-    while(generation_num <= generation_ceiling):  
-        print(generation_num)
+    while(generation_num <= generation_ceiling):   
+            new_generation = []
 
-        for i in population:
-            i.fitness = is_true(formula, i.genotype)
-            if i.fitness == CLAUSULE_COUNT:
-                print("Solution for",formula, "found in", generation_num, "generations:", i.genotype)
-                return
+            # evaluate fitness of each individual in current population, add to dataset
+            for i in population:
+                i.evaluate()
+                add_entry(data, generation_num, i.genotype, i.fitness)
 
-        new_generation = []
-        for i in population:
-                parent_A = roulette(population)
-                parent_B = roulette(population)
-                offspring = Individual_SLF(parent_A=parent_A, parent_B=parent_B, offspring=True)
+                if i.fitness is None:
+                    continue
+                if i.fitness > max_fitness:
+                    best_sol = i
+                    max_fitness = i.fitness
+                if i.solved():
+                    print("Solution found in", generation_num, "generations:", i.genotype)
+                    return
+
+            # select 2 parents, create offspring, repeat until new generation is complete
+            for i in population:
+                parent_A = select(population)
+                parent_B = select(population)
+                offspring = individual(parent_A=parent_A, parent_B=parent_B, offspring=True)
 
                 new_generation.append(offspring)
 
-        population = new_generation.copy()
-        generation_num+=1
-    
-    
+            population = new_generation.copy()
+            generation_num+=1
 
+    if out_path is not False:
+        print("Best solution found after",generation_ceiling,"generations:",best_sol.genotype, best_sol.fitness)
+        print("Exporting dataset to", out_path,"...")
+        df = pd.DataFrame(data) 
+        df.to_csv(out_path, index=False, header=columns(best_sol)) 
+        print("Dataset exported")
 
-# function_extreme('(x/40)**2 - (x/40)**3 - 10*(x/40)**4 + (y/40)**2 - (y/40)**3 - 10*(y/40)**4', 100, 100, (-10, 10))
-# ∨∧¬
-
-satisfiability('a∧b∧c∧d∧e∧f∧g∧h∧i∧j∧k∧l∧m∧n∧o∧p∧q∧r∧s∧t∧u∧v', generation_ceiling=100)
+function_extreme('(x/40)**2 - (x/40)**3 - 10*(x/40)**4 + (y/40)**2 - (y/40)**3 - 10*(y/40)**4', interval = (-10, 10))
+satisfiability('a∧b∧c∧d∧e∧f∧g∧h∧i∧j∧k∧l∧m∧n∧o∧p∧q∧r∧s∧t∧u∧v∧w∧x∧y∧z∧A∧B∧C∧D∧E∧F∧G∧H∧I∧J∧K∧L∧M∧N∧O∧P∧Q∧R∧S∧T∧U∧V∧W∧X∧Y∧Z')
