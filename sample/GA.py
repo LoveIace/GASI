@@ -6,12 +6,67 @@ import sympy as sp
 import pandas as pd
 
 class Individual_TSP:
-    def __init__(self, genotype_len):
+    def evaluate(self):
+        tour_length = 0
+        previous = self.genotype[0]
+        for current in self.genotype:
+            tour_length += self.distances[previous-1][current-1]
+        self.fitness = -tour_length
+
+    def solved(self):
+        return False
+
+    def mutate(self):
+        mutation_check = random.random()
+        if mutation_check < 0.5:
+            # generate start and end of subtour to shift
+            start = random.randrange(len(self.distances))
+            end = random.randrange(len(self.distances))
+            if start > end:
+                start, end = end, start
+
+            # slice subtour out of genotype
+            cut = self.genotype[start:end+1]
+            del self.genotype[start:end+1]
+
+            # insert slice to newly generated spot
+            start_new = random.randrange(len(self.distances))
+            self.genotype[start_new:start_new] = cut
+        elif mutation_check < 0.8:
+            a = random.randrange(len(self.genotype))
+            b = random.randrange(len(self.genotype))
+            self.genotype[a], self.genotype[b] = self.genotype[b], self.genotype[a]
+
+    def __init__(self, distances=[], parent_A=None, parent_B=None, offspring=False, mutate=True):
         self.fitness = None
         self.genotype = []
-        for i in range(genotype_len):
-            self.genotype.append(i+1)
-        shuffle(self.genotype)
+        self.distances = distances.copy()
+        # crossover
+        if offspring is True:
+            self.distances += parent_A.distances.copy()
+            # choose start and end points of section for crossover
+            start = random.randrange(len(self.distances))
+            end = random.randrange(len(self.distances))
+            if start > end:
+                start, end = end, start
+
+            # genes from parent A
+            from_A = parent_A.genotype[start:end+1]
+            
+            # genes from parent B
+            for genome in parent_B.genotype:
+                if genome not in from_A:
+                    self.genotype.append(genome)
+
+            # insert A genes into B genes
+            self.genotype[start:start] = from_A
+
+            if mutate is True:
+                self.mutate()
+        else:
+            for i in range(len(distances)):
+                self.genotype.append(i+1)
+            shuffle(self.genotype)
 
 class Individual_SLF:
     def solved(self):
@@ -33,7 +88,13 @@ class Individual_SLF:
                     break
         return
 
-    def __init__(self, formula=None, clausules=None, variables=None, parent_A=None, parent_B=None, offspring = False):
+    def mutate(self):
+        for i in range(len(self.genotype)):
+            mutation_check = random.random()
+            if mutation_check < 0.025:
+                self.genotype[i][1] = not self.genotype[i][1]
+
+    def __init__(self, formula=None, clausules=None, variables=None, parent_A=None, parent_B=None, offspring=False, mutate=True):
         self.fitness = None
         self.CLAUSULE_COUNT = clausules
         self.formula = formula
@@ -48,6 +109,8 @@ class Individual_SLF:
                     self.genotype[var] = parent_A.genotype[var]
                 else:
                     self.genotype[var] = parent_B.genotype[var]
+            if mutate is True:
+                self.mutate()       
         else:
             self.genotype = variables.copy()
             for var in self.genotype:
@@ -158,15 +221,25 @@ def add_entry(data, gen_num, genotype, fitness):
     entry = []
     entry.append(gen_num)
     for genome in genotype:
-        entry.append(genotype[genome]) if isinstance(genotype,dict) else entry.append(genome[1])
+        if isinstance(genome,list):
+            entry.append(genome[1])
+        elif isinstance(genotype,dict):
+            entry.append(genotype[genome])
+        else:
+            entry.append(genome)   
     entry.append(fitness)
     data.append(entry)
 
 def columns(i):
     if isinstance(i.genotype,dict):
         return ['generation'] + list(i.genotype.keys()) + ['fitness']
-    else:
+    elif isinstance(i.genotype[0],list):
         return ['generation'] + list(i.problem.free_symbols) + ['fitness']
+    else:
+        numbers = []
+        for x in range(len(i.distances)):
+            numbers.append(x+1)
+        return ['generation'] + numbers + ['fitness']
 
 def genetic_algo(population, population_size, generation_ceiling, select, individual, elitism = True, out_path = False):
     generation_num = 1
@@ -209,5 +282,29 @@ def genetic_algo(population, population_size, generation_ceiling, select, indivi
         df.to_csv(out_path, index=False, header=columns(best_sol)) 
         print("Dataset exported")
 
-function_extreme('(x/40)**2 - (x/40)**3 - 10*(x/40)**4 + (y/40)**2 - (y/40)**3 - 10*(y/40)**4', interval = (-10, 10))
-satisfiability('a∧b∧c∧d∧e∧f∧g∧h∧i∧j∧k∧l∧m∧n∧o∧p∧q∧r∧s∧t∧u∧v∧w∧x∧y∧z∧A∧B∧C∧D∧E∧F∧G∧H∧I∧J∧K∧L∧M∧N∧O∧P∧Q∧R∧S∧T∧U∧V∧W∧X∧Y∧Z')
+def travelling_salesman(distances, population_size = 100, generation_ceiling = 100):
+    population = []
+
+    for i in range(population_size):
+        population.append(Individual_TSP(distances))
+
+    genetic_algo(population, population_size, generation_ceiling, tournament, Individual_TSP, out_path='documentation/tsp_out.csv')
+
+def generate_distance_matrix(size, max_distance):
+    matrix = []
+    for i in range(size):
+        row = []
+        for j in range(size-1):
+            row.append(round(random.uniform(0, max_distance), 2))
+        row.insert(i, 0)
+        matrix.append(row)
+    return matrix  
+
+distance_matrix = generate_distance_matrix(500,10)  
+
+# function_extreme('(x/40)**2 - (x/40)**3 - 10*(x/40)**4 + (y/40)**2 - (y/40)**3 - 10*(y/40)**4', interval = (-10, 10))
+# satisfiability('a∧b∧c∧d∧e∧f∧g∧h∧i∧j∧k∧l∧m∧n∧o∧p∧q∧r∧s∧t∧u∧v∧w∧x∧y∧z∧A∧B∧C∧D∧E∧F∧G∧H∧I∧J∧K∧L∧M∧N∧O∧P∧Q∧R∧S∧T∧U∧V∧W∧X∧Y∧Z')
+travelling_salesman(distance_matrix)
+
+
+
