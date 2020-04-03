@@ -11,6 +11,7 @@ class Individual_TSP:
         previous = self.genotype[0]
         for current in self.genotype:
             tour_length += self.distances[previous-1][current-1]
+            previous = current
         self.fitness = -tour_length
 
     def solved(self):
@@ -19,7 +20,7 @@ class Individual_TSP:
     def mutate(self):
         mutation_check = random.random()
         if mutation_check < 0.5:
-            # generate start and end of subtour to shift
+            # generate start and end of subtour to mutate
             start = random.randrange(len(self.distances))
             end = random.randrange(len(self.distances))
             if start > end:
@@ -29,9 +30,14 @@ class Individual_TSP:
             cut = self.genotype[start:end+1]
             del self.genotype[start:end+1]
 
-            # insert slice to newly generated spot
-            start_new = random.randrange(len(self.distances))
-            self.genotype[start_new:start_new] = cut
+            if random.random() < 0.5:   
+                # insert slice to newly generated spot
+                start_new = random.randrange(len(self.distances))
+                self.genotype[start_new:start_new] = cut
+            else:
+                self.genotype[start:start] = cut[::-1]
+
+
         elif mutation_check < 0.8:
             a = random.randrange(len(self.genotype))
             b = random.randrange(len(self.genotype))
@@ -294,17 +300,27 @@ def generate_distance_matrix(size, max_distance):
     matrix = []
     for i in range(size):
         row = []
-        for j in range(size-1):
-            row.append(round(random.uniform(0, max_distance), 2))
-        row.insert(i, 0)
+        for j in range(i,size-1):
+            row.append(j-i+1)
+        row.insert(0, 0)
+        for k in range(i):
+            row.insert(0, k+1)
         matrix.append(row)
-    return matrix  
+    return matrix
 
-distance_matrix = generate_distance_matrix(500,10)  
+    # for i in range(size):
+    #     row = []
+    #     for j in range(size-1):
+    #         row.append(round(random.uniform(0, max_distance), 2))
+    #     row.insert(i, 0)
+    #     matrix.append(row)
+    # return matrix  
+
+distance_matrix = generate_distance_matrix(30,10)  
 
 # function_extreme('(x/40)**2 - (x/40)**3 - 10*(x/40)**4 + (y/40)**2 - (y/40)**3 - 10*(y/40)**4', interval = (-10, 10))
 # satisfiability('a∧b∧c∧d∧e∧f∧g∧h∧i∧j∧k∧l∧m∧n∧o∧p∧q∧r∧s∧t∧u∧v∧w∧x∧y∧z∧A∧B∧C∧D∧E∧F∧G∧H∧I∧J∧K∧L∧M∧N∧O∧P∧Q∧R∧S∧T∧U∧V∧W∧X∧Y∧Z')
-travelling_salesman(distance_matrix)
+# travelling_salesman(distance_matrix)
 
 
 
