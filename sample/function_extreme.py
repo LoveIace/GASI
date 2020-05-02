@@ -3,6 +3,7 @@ import numpy
 import sympy
 import pandas
 import copy
+import itertools
 from optimization import genetic_algo, firefly_algo
 
 class Firefly:
@@ -35,22 +36,26 @@ class Firefly:
             sum += (self.position[i][1] - firefly.position[i][1]) ** 2
         return sum**0.5
 
-    def intensity(self, firefly):
-        return self.brightness * numpy.exp(-self.gamma * self.distance(firefly) ** 2)
+    def intensity(self, min_brightness, firefly = None):
+        if not firefly:
+            return (self.brightness + abs(min_brightness)*1.1)
+        else:
+            return (self.brightness + abs(min_brightness)*1.1) * numpy.exp(-self.gamma * self.distance(firefly) ** 2)
 
     def move_towards(self, firefly):
         for position, target in zip(self.position, firefly.position):
-            position[1] += (self.beta - self.beta_min) * numpy.exp(-self.gamma * self.distance(firefly) ** 2) * (target[1] - position[1]) + self.alpha * (random.uniform(0, 1) - 0.5) + self.beta_min
+            position[1] += (self.beta - self.beta_min) * numpy.exp(-self.gamma * self.distance(firefly) ** 2) * (target[1] - position[1]) + self.alpha * (random.uniform(-1, 1)) + self.beta_min
 
     def random_walk(self):
         for coord in self.position:
             coord[1] += self.alpha * (random.uniform(0, 1) - 0.5)
 
     def values(self):
-        return [coord[1] for coord in self.position]
+        return [coord[1] for coord in self.position] + [self.brightness]
 
 class Individual:
     def __init__(self, function=None, lower=None, upper=None, parent_A=None, parent_B=None, mutation_rate=1):
+        self.fitness = 0
         if not parent_A:
             self.lower = lower
             self.upper = upper
@@ -79,7 +84,7 @@ class Individual:
             self.genotype[mutated_gene][1] = numpy.clip(self.lower, self.upper, self.genotype[mutated_gene][1]*0.8)
 
     def values(self):
-        return [genome[1] for genome in self.genotype]
+        return [genome[1] for genome in self.genotype] + [self.fitness]
 
 class Function_Extreme:
     def __init__(self, function, lower, upper, optimum = None, minimize = False):
@@ -112,19 +117,21 @@ class Function_Extreme:
         else:
             return True
 
-    def offspring(self, a, b, mutation_rate):
-        return Individual(parent_A=a, parent_B=b, mutation_rate=mutation_rate)
+    def offspring(self, parent_A, parent_B, mutation_rate):
+        return Individual(parent_A=parent_A, parent_B=parent_B, mutation_rate=mutation_rate)
 
     def values(self):
         return [
             variable for variable in self.function.free_symbols
-        ]
+        ] 
 
-# problem = Function_Extreme('-20*exp(-0.2*(0.5*(x**2+y**2))**0.5)-exp(0.5*(cos(2*3.14159*x)+cos(2*3.14159*y)))+2.71828+20', -5, 5, minimize=True)
-# firefly_algo(problem)
+# problem = Function_Extreme('(x/40)**2 - (x/40)**3 - 10*(x/40)**4 + (y/40)**2 - (y/40)**3 - 10*(y/40)**4', -10, 10)
+# firefly_algo(problem, iteration_ceiling=100)
+# genetic_algo(problem)
 
 # '-20*exp(-0.2*(0.5*(x**2+y**2))**0.5)-exp(0.5*(cos(2*pi*x+cos(2*pi*y)))) + e + 20'
 # '(x/40)**2 - (x/40)**3 - 10*(x/40)**4 + (y/40)**2 - (y/40)**3 - 10*(y/40)**4'
+# '-20*exp(-0.2*(0.5*(x**2+y**2))**0.5)-exp(0.5*(cos(2*3.14159*x)+cos(2*3.14159*y)))+2.71828+20'
 
 # def ackley(X,Y):
 #     a=20
@@ -143,5 +150,3 @@ class Function_Extreme:
 
 # fn = sympy.sympify('2.71828/10+x')
 # print(fn.subs([['x',10]]))
-
-print("yo"+1)

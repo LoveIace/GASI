@@ -1,126 +1,128 @@
 import random
+import numpy
 from optimization import genetic_algo, firefly_algo
+import util_tsp
+import math
 
-def shuffle(list):
-    for i in range(len(list)-1, 0, -1): 
-        j = random.randint(0, i) 
-        list[i], list[j] = list[j], list[i] 
+class Firefly:
+    def __init__(self, matrix, alpha, beta, beta_min, gamma):
+        self.matrix = matrix
+        self.alpha = alpha
+        self.beta = beta
+        self.beta_min = beta_min
+        self.gamma = gamma
+        self.position = [
+                i+1 for i in range(len(matrix))
+        ]
+        util_tsp.shuffle(self.position, start=1)
+        self.update_brightness()
 
-def generate_distance_matrix(size, max_distance):
-    matrix = []
-    for i in range(size):
-        row = []
-        for j in range(i,size-1):
-            row.append(j-i+1)
-        row.insert(0, 0)
-        for k in range(i):
-            row.insert(0, k+1)
-        matrix.append(row)
-    return matrix
+    def distance(self, firefly):
+        return util_tsp.hamming_distance(self.position, firefly.position)
 
-    # for i in range(size):
-    #     row = []
-    #     for j in range(size-1):
-    #         row.append(round(random.uniform(0, max_distance), 2))
-    #     row.insert(i, 0)
-    #     matrix.append(row)
-    # return matrix
+    def update_brightness(self):
+        self.brightness = 1 / util_tsp.length(self.position, self.matrix)
+    
+    def intensity(self, min_brightness, firefly = None):
+        if not firefly:
+            return (self.brightness + abs(min_brightness)*1.1)
+        else:
+            return (self.brightness + abs(min_brightness)*1.1) * numpy.exp(-self.gamma * util_tsp.hamming_distance(self.position, firefly.position) ** 2)
+
+    def move_towards(self, firefly):
+        distance = util_tsp.hamming_distance(self.position, firefly.position)
+        k = random.randrange(2, distance+1) if distance >= 2 else 2
+
+        if distance < 7:
+            print("!!!!!!!")
+            print(util_tsp.length(self.position, self.matrix))
+            self.position = util_tsp.kopt(self.position, k, self.matrix)
+            print(util_tsp.length(self.position, self.matrix))
+        else:
+            # self.position = util_tsp.relocate(self.position, k, inverse=True)
+            util_tsp.fix_k(self.position, firefly.position, distance//5)
+
+    def random_walk(self):
+        # self.position = util_tsp.kchange(self.position, len(self.position)//3)
+        self.position = util_tsp.relocate(self.position, random.randrange(len(self.position)), inverse=True)
+        # self.position = util_tsp.kopt(self.position, 4, self.matrix)
+
+    def values(self):
+        return self.position + [math.ceil(1/self.brightness)]
 
 class Individual:
     def __init__(self, length=0, parent_A=None, parent_B=None, mutation_rate=1):
+        self.fitness = 0
         if not parent_A:
             self.length = length
             self.genotype = [
                 i+1 for i in range(length)
             ]
-            shuffle(self.genotype)
+            util_tsp.shuffle(self.genotype, start=1)
         else:
             self.length = parent_A.length
-            # choose start and end points of section for crossover
-            start = random.randrange(self.length)
-            end = random.randrange(self.length)
-            if start > end:
-                start, end = end, start
-
-            # genes from parent A
-            from_A = parent_A.genotype[start:end+1]
-            
             self.genotype = []
-            # genes from parent B
-            for genome in parent_B.genotype:
-                if genome not in from_A:
-                    self.genotype.append(genome)
 
-            # insert A genes into B genes
-            self.genotype[start:start] = from_A
+            # choose start and end points of section for crossover
+            left = random.randrange(self.length)
+            right = random.randrange(self.length)
 
+            if left < right:
+                from_parent_B = parent_B.genotype[left:right]
+            else:
+                from_parent_B = parent_B.genotype[left:] + parent_B.genotype[:right]
+            
+            for gene in parent_A.genotype:
+                if gene not in from_parent_B:
+                    self.genotype.append(gene)
+            
+            self.genotype[left:left] = from_parent_B
+            self.genotype = util_tsp.realign(self.genotype)
+            
             if random.random() < mutation_rate:
                 self.mutate()
 
     def mutate(self):
-        mutation_check = random.random()
-        if mutation_check < 0.5:
-            # generate start and end of subtour to mutate
-            start = random.randrange(self.length)
-            end = random.randrange(self.length)
-            if start > end:
-                start, end = end, start
-
-            # slice subtour out of genotype
-            cut = self.genotype[start:end+1]
-            del self.genotype[start:end+1]
-
-            if random.random() < 0.5:   
-                # insert slice to newly generated spot
-                start_new = random.randrange(self.length)
-                self.genotype[start_new:start_new] = cut
-            else:
-                self.genotype[start:start] = cut[::-1]
-
-
-        elif mutation_check < 0.8:
-            a = random.randrange(self.length)
-            b = random.randrange(self.length)
-            self.genotype[a], self.genotype[b] = self.genotype[b], self.genotype[a]
+        self.genotype = util_tsp.relocate(tour=self.genotype, 
+                                            k=random.randrange(self.length), 
+                                            shift=random.randrange(self.length),
+                                            inverse=bool(random.getrandbits(1)))
 
     def values(self):
-        return self.genotype
+        return self.genotype + [1/self.fitness]
 
 class Travelling_Salesman:
-    def __init__(self, distance_matrix, optimum = None, minimize = False):
-        self.distance_matrix = distance_matrix
+    def __init__(self, towns, optimum = None, minimize = False):
+        self.towns = towns
+        self.distance_matrix = util_tsp.distance_matrix_from_points(towns)
         self.optimum = optimum
         self.minimize = minimize
-        self.number_of_towns = len(distance_matrix)
+
+    def fireflies(self, population_size, alpha, beta, beta_min, gamma):
+        return [
+            Firefly(self.towns, alpha, beta, beta_min, gamma)
+            for _ in range(population_size)
+        ]
 
     def population(self, population_size):
         return [
-            Individual(self.number_of_towns)
+            Individual(len(self.towns))
             for _ in range(population_size)
         ]
 
     def is_solved(self, individual):
-        if not self.optimum or self.optimum != individual.fitness:
+        if not self.optimum or 1/self.optimum > individual.fitness:
             return False
         else:
             return True
 
     def evaluate(self, individual):
-        tour_length = 0
-        previous = individual.genotype[0]
-        for current in individual.genotype:
-            tour_length += self.distance_matrix[previous-1][current-1]
-            previous = current
-        individual.fitness = -tour_length if self.minimize else tour_length
+        individual.fitness = 1 / util_tsp.length(individual.genotype, self.distance_matrix)
 
     def offspring(self, parent_A, parent_B, mutation_rate):
         return Individual(parent_A=parent_A, parent_B=parent_B, mutation_rate=mutation_rate)
 
     def values(self):
         return [
-            i+1 for i in range(self.number_of_towns)
+            i+1 for i in range(len(self.towns))
         ]
-
-distance_matrix = generate_distance_matrix(30,10)
-problem = Travelling_Salesman(distance_matrix, minimize=True)
-genetic_algo(problem, 100, 100)

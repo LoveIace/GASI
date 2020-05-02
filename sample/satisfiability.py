@@ -1,9 +1,11 @@
 import random
 import re
+import binascii
 from optimization import genetic_algo, firefly_algo
 
 class Individual:
     def __init__(self, variables=None, parent_A=None, parent_B=None, mutation_rate=1):
+        self.fitness = 0
         if not parent_A:
             self.genotype = variables.copy()
             for var in self.genotype:
@@ -24,7 +26,7 @@ class Individual:
         self.genotype[mutated] = not self.genotype[mutated]
 
     def values(self):
-        return list(self.genotype.values())
+        return list(self.genotype.values()) + [abs(self.fitness)]
 
 class Satisfiability:
     def __init__(self, formula):
@@ -69,6 +71,3 @@ class Satisfiability:
         return [
             variable for variable in self.variables
         ]
-
-problem = Satisfiability('a∧b∧c∧d∧e∧f∧g∧h∧i∧j∧k∧l∧m∧n∧o∧p∧q∧r∧s∧t∧u∧v∧w∧x∧y∧z∧A∧B∧C∧D∧E∧F∧G∧H∧I∧J∧K∧L∧M∧N∧O∧P∧Q∧R∧S∧T∧U∧V∧W∧X∧Y∧Z')
-genetic_algo(problem)
