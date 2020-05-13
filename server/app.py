@@ -22,7 +22,7 @@ from flask_cors import CORS
 
 
 # configuration
-DEBUG = True
+# DEBUG = True
 
 # instantiate the app
 app = Flask(__name__)
@@ -140,19 +140,21 @@ def run_fe():
             }
         ]
         size = util.get_att("Population size", variables)
-        response_object['points'] = []
 
-        for i in range(gen):
+        # point data for each individual
+        response_object['points'] = []
+        for i in range(gen-1):
             response_object['points'].append([])
             for j in range(size):
                 response_object['points'][i].append({'x':data[i*size+j][1], 'y':data[i*size+j][2]})
 
-        # print(util.get_distribution(data[-50:]))
+        # fitness distribution for each generation
         response_object['distribution'] = []
         response_object['dist_labels'] = ["" for _ in range(50)]
-        for i in range(gen):
-            y = util.get_distribution(data[i*size:i*size+size])
-            response_object['distribution'].append(y)
+        for i in range(gen-1):
+            chunk = data[i*size:i*size+size]
+            distribution = util.get_distribution(chunk)
+            response_object['distribution'].append(distribution)
         
         response_object['best_solution'] = best_solution
 
@@ -171,15 +173,18 @@ def run_sat():
         variables, problem = post_data['variables'], post_data['problem']
         formula = util_sat.get_sat_problem('./sat_problems/'+problem)
         sat_problem = sat.Satisfiability(formula)
-        df, _, gen = genetic_algo(sat_problem, 
-                            generation_ceiling=util.get_att("Generation ceiling", variables), 
-                            population_size=util.get_att("Population size", variables), 
-                            mutation_rate=util.get_att("Mutation rate", variables),
-                            select=util.get_att("Selection type", variables),
-                            elitism=util.get_att("Elitism", variables),
-                            out_path=False)
-            
-        best_solution = util.get_min_overall(df) if minimize else util.get_max_overall(df)
+        df, data, gen = genetic_algo(   sat_problem, 
+                                        generation_ceiling=util.get_att("Generation ceiling", variables), 
+                                        population_size=util.get_att("Population size", variables), 
+                                        mutation_rate=util.get_att("Mutation rate", variables),
+                                        select=util.get_att("Selection type", variables),
+                                        elitism=util.get_att("Elitism", variables),
+                                        out_path=False)
+
+        min_value = util.get_min_overall(df)[-1]
+        max_value = util.get_max_overall(df)[-1]
+        best_solution = min_value if minimize else max_value
+
         response_object['labels'] = [i+1 for i in range(gen)]
         response_object['datasets'] = [
             {
@@ -192,9 +197,19 @@ def run_sat():
             'data':util.get_min(df)
             }
         ]
-        response_object['best_solution'] = int(best_solution[-1])
+
+        size = util.get_att("Population size", variables)
+        # fitness distribution for each generation
+        response_object['distribution'] = []
+        response_object['dist_labels'] = ["" for _ in range(50)]
+        for i in range(gen-1):
+            chunk = data[i*size:i*size+size]
+            distribution = util.get_distribution(chunk, min_value, max_value)
+            response_object['distribution'].append(distribution)
+
+        response_object['best_solution'] = int(best_solution)
         response_object['clauses'] = formula.clauses
-        response_object['satisfiable'] = True if int(best_solution[-1]) >= sat_problem.clause_count else False
+        response_object['satisfiable'] = True if int(best_solution) >= sat_problem.clause_count else False
 
 
         return jsonify(response_object)

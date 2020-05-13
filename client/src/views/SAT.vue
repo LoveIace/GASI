@@ -5,31 +5,53 @@
         <sidebar :disable="true" ref="sidebar" @run="run($event)" />
       </v-col>
       <v-col cols="8">
-        <v-col>
-          <linechart :chartData="datacollection"></linechart>
-          <div class="d-flex justify-space-between">
-            <p class="ma-2">
-              {{solution}}
-              <b>{{satisfiable}}</b>
-            </p>
-            <v-sheet width="600">
-              <v-select
-                prepend-icon="mdi-ampersand"
-                v-model="chosen_problem"
-                :hint="hint"
-                :items="problems"
-                label="Pick a problem"
-                item-text="name"
-                persistent-hint
-                return-object
-                v-on:change="pick"
-              ></v-select>
+        <v-row>
+          <v-col cols="6">
+            <dchart :chartData="distpoints" />
+            <v-sheet class="mx-auto mt-3">
+              <p class="ma-2">
+                {{solution}}
+                <b>{{satisfiable}}</b>
+              </p>
+              <v-slider
+                :disabled="solution == null"
+                v-on:change="drawGraphs"
+                v-model="step"
+                :max="maxStep"
+                min="0"
+                hide-details
+              >
+                <template v-slot:prepend>
+                  <v-icon color="primary" @click="decrement">mdi-minus</v-icon>
+                </template>
+                <template v-slot:append>
+                  <v-icon color="primary" @click="increment">mdi-plus</v-icon>
+                </template>
+              </v-slider>
             </v-sheet>
-          </div>
+          </v-col>
+          <v-col cols="6">
+            <linechart :chartData="datacollection"></linechart>
+            <div class="d-flex justify-space-between">
+              <v-sheet width="600">
+                <v-select
+                  prepend-icon="mdi-ampersand"
+                  v-model="chosen_problem"
+                  :hint="hint"
+                  :items="problems"
+                  label="Pick a problem"
+                  item-text="name"
+                  persistent-hint
+                  return-object
+                  v-on:change="pick"
+                ></v-select>
+              </v-sheet>
+            </div>
+          </v-col>
           <div class="d-flex justify-end ma-10">
             <results :solved_data="solved_data" />
           </div>
-        </v-col>
+        </v-row>
       </v-col>
     </v-row>
   </div>
@@ -40,13 +62,15 @@ import axios from "axios";
 import Sidebar from "@/components/Sidebar.vue";
 import LineChart from "@/components/LineChart.vue";
 import ResultsCard from "@/components/ResultsCard.vue";
+import DistChart from "@/components/DistChart.vue";
 
 export default {
   name: "SAT",
   components: {
     sidebar: Sidebar,
     linechart: LineChart,
-    results: ResultsCard
+    results: ResultsCard,
+    dchart: DistChart
   },
   computed: {
     hint() {
@@ -61,6 +85,8 @@ export default {
   },
   data() {
     return {
+      step: 0,
+      maxStep: 100,
       chosen_problem: {},
       problems: [],
       solution: "",
@@ -69,12 +95,24 @@ export default {
       datacollection: null,
       picked: false,
       solved_data: [],
-      solved_headers: []
+      solved_headers: [],
+      distpoints: null,
+      dist_data: null,
+      dist_labels: null
     };
   },
   methods: {
-    clearGraphs() {
-      this.datacollection = null;
+    increment() {
+      if (this.step < this.maxStep) {
+        this.step++;
+        this.drawGraphs();
+      }
+    },
+    decrement() {
+      if (this.step > 0) {
+        this.step--;
+        this.drawGraphs();
+      }
     },
     run(variables) {
       var entry = variables.reduce(
@@ -93,6 +131,11 @@ export default {
               return { ...ds, data: res.data.datasets[i].data };
             })
           };
+          this.dist_data = res.data.distribution;
+          this.dist_labels = res.data.dist_labels;
+          this.step = 0;
+          this.maxStep = this.dist_data.length-1;
+          this.drawGraphs();
           entry.best = res.data.best_solution;
           this.solved_data.push(entry);
 
@@ -132,6 +175,22 @@ export default {
           }
         ]
       };
+    },
+    distGraph(data = [], labels = []) {
+      return {
+        labels: labels,
+        datasets: [
+          {
+            label: "distribution",
+            data: data,
+            borderColor: "#4b4a5c",
+            backgroundColor: "#9594ae"
+          }
+        ]
+      };
+    },
+    drawGraphs() {
+      this.distpoints = this.distGraph(this.dist_data[this.step], this.dist_labels);
     },
     getProblems() {
       const path = "http://localhost:5000/sat";

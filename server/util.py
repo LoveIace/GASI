@@ -142,12 +142,21 @@ def normalize_coordinates(points, range, x=0, y=1):
 
 
 # ...............................................................................
-def get_distribution(data):
+def get_distribution(data, min_=None, max_=None):
     from scipy.stats import gaussian_kde
+    from statistics import stdev
     
     values = [row[-1] for row in data]
-    min_ = min(values)
-    max_ = max(values)
+
+    if min_==None:
+        min_ = min(values)
+    if max_==None:
+        max_ = max(values)
+
+    sd = abs(stdev(values))
+    min_ -= sd
+    max_ += sd
+
     kde = gaussian_kde(values)
     return kde.evaluate(numpy.linspace(min_, max_, 50)).tolist()
  

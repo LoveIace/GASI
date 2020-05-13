@@ -45,6 +45,7 @@ def firefly_algo(problem, population_size = 20, iteration_ceiling = 50, alpha = 
 
         best = max(fireflies, key=lambda f: f.brightness)
         if problem.is_solved(best.brightness):
+            iter_count+=1
             return
         best.random_walk(alpha)
 
@@ -90,6 +91,7 @@ def genetic_algo(problem, population_size = 50, generation_ceiling = 25, select 
 
         # if population contains the problem solution break cycle
         if problem.is_solved(population[0].fitness):
+            generation_num+=1
             break
 
         # account for elitism
