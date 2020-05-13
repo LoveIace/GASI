@@ -17,17 +17,15 @@ import sys
 import time
 import numpy
 import pandas as pd
-from flask import Flask, jsonify, request, Response, stream_with_context, render_template
+from flask import Flask, jsonify, request, Response, stream_with_context
 from flask_cors import CORS
-import requests
+
 
 # configuration
-DEBUG = False
+# DEBUG = True
 
 # instantiate the app
-app = Flask(__name__,
-            static_folder = "../client/dist/static",
-            template_folder = "../client/dist")
+app = Flask(__name__)
 app.config.from_object(__name__)
 
 # enable CORS
@@ -215,13 +213,6 @@ def run_sat():
 
 
         return jsonify(response_object)
-
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def catch_all(path):
-    if app.debug:
-        return requests.get('http://localhost:8080/{}'.format(path)).text
-    return render_template("index.html")
 
 #...............................................................................
 if __name__ == '__main__':
