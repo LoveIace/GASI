@@ -7,15 +7,15 @@
       </v-btn>
       <v-tabs>
         <v-tab to="/SAT">
-          <span>Satisfiability</span>
+          <span>SAT</span>
           <v-icon>mdi-format-letter-matches</v-icon>
         </v-tab>
         <v-tab to="/TSP">
-          <span>Travelling Salesman</span>
+          <span>TSP</span>
           <v-icon>mdi-graphql</v-icon>
         </v-tab>
         <v-tab to="/FE">
-          <span>Function Extreme</span>
+          <span>FE</span>
           <v-icon>mdi-function-variant</v-icon>
         </v-tab>
       </v-tabs>

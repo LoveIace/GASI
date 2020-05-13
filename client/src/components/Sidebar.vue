@@ -62,9 +62,10 @@ export default {
         variables:[
           { name: "Iteration ceiling", value: 50, min: 10, max: 1000, type:"slider", step:10 },
           { name: "Population size", value: 25, min: 10, max: 200, type:"slider" },
-          { name: "Alpha", value: 1.5, min: 0, max: 10, type:"slider", step:0.1 },
+          { name: "Alpha", value: 1, min: 0, max: 10, type:"slider", step:0.1 },
           { name: "Beta", value: 0.6, min: 0, max: 1, type:"slider", step:0.1 },
-          { name: "Gamma", value: 0.005, min: 0, max: 1, type:"slider", step:0.00001 }
+          { name: "Gamma", value: 0.0005, min: 0, max: 1, type:"slider", step:0.00001 },
+          { name: "Delta", value: 0.97, min: 0, max: 1, type:"slider", step:0.001 }
         ]
       },
       "genetic":{
@@ -73,7 +74,7 @@ export default {
           { name: "Population size", value: 50, min: 10, max: 200, type:"slider" },
           { name: "Mutation rate", value: 100, min: 0, max: 1, type:"slider", step:0.01 },
           { name: "Selection type", value:"Tournament", values: ["Roulette", "Tournament", "Uniform"], type:"select"},
-          { name: "Elitism", value: true, type:"switch" }
+          { name: "Elitism", value: 0.02, min: 0, max: 1, type:"slider", step:0.01 }
         ]
       },
       algo: "genetic"

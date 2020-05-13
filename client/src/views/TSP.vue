@@ -5,40 +5,36 @@
         <!-- <h1 class="ma-3">Travelling Salesman problem</h1> -->
         <sidebar ref="sidebar" @run="run($event)" />
       </v-col>
-      <v-col cols="9">
+      <v-col cols="8">
         <v-row>
-          <v-col cols="5">
+          <v-col cols="6">
             <cartchart :chartData="tspdata"></cartchart>
             <v-sheet width="500">
-              <p class="ma-5">
-                {{this.solution}}
-              </p>
+              <p class="ma-5">{{this.solution}}</p>
             </v-sheet>
           </v-col>
           <v-col cols="6">
             <linechart :chartData="datacollection"></linechart>
-            <div class="d-flex justify-end">
-              <v-sheet width="500">
-                <v-select
-                  prepend-icon="mdi-map"
-                  v-model="chosen_problem"
-                  :hint="hint"
-                  :items="problems"
-                  label="Pick a problem"
-                  item-text="cities"
-                  persistent-hint
-                  return-object
-                  v-on:change="pick"
-                ></v-select>
-              </v-sheet>
-            </div>
+            <v-sheet class="mx-auto mt-3" max-width="600">
+              <v-select
+                prepend-icon="mdi-map"
+                v-model="chosen_problem"
+                :hint="hint"
+                :items="problems"
+                label="Pick a problem"
+                item-text="name"
+                persistent-hint
+                return-object
+                v-on:change="pick"
+              ></v-select>
+            </v-sheet>
           </v-col>
         </v-row>
+        <div class="d-flex justify-end ma-10">
+          <results :solved_data="solved_data" />
+        </div>
       </v-col>
     </v-row>
-    <div class="d-flex justify-end ma-10">
-          <results :solved_data="solved_data" />
-    </div>
   </div>
 </template>
 
@@ -92,7 +88,7 @@ export default {
       axios
         .post(path, {
           variables: variables,
-          problem: this.chosen_problem.index
+          problem: this.chosen_problem
         })
         .then(res => {
           this.datacollection = {
@@ -111,12 +107,13 @@ export default {
               };
             })
           };
-          entry.best = this.solution;
-          this.solution = "Tour length: " + (
-            Math.round(res.data.best_solution * 100) / 100
-          ).toFixed(2);
-          this.$refs.sidebar.loading = false;
+          entry.best = res.data.best_solution;
           this.solved_data.push(entry);
+
+          this.solution =
+            "Tour length: " +
+            (Math.round(res.data.best_solution * 100) / 100).toFixed(2);
+          this.$refs.sidebar.loading = false;
         })
         .catch(error => {
           // eslint-disable-next-line
@@ -131,19 +128,19 @@ export default {
             label: "max",
             data: [],
             fill: "none",
-            borderColor: "#d18b19"
+            borderColor: "#4B4A5C"
           },
           {
             label: "mean",
             data: [],
             fill: "none",
-            borderColor: "#609e94"
+            borderColor: "#F0AD9E"
           },
           {
             label: "min",
             data: [],
             fill: "none",
-            borderColor: "#604280"
+            borderColor: "#9594AE"
           }
         ]
       };
@@ -154,7 +151,8 @@ export default {
           {
             data: [],
             borderWidth: 2,
-            // borderColor: '#064380',
+            borderColor: "#9594AE",
+            backgroundColor: "#9594AE",
             pointRadius: 1,
             fill: false,
             tension: 0,

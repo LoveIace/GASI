@@ -8,4 +8,7 @@ def get_sat_problem(path):
     f = tar.extractfile(random.choice(tar.getmembers()))
     content = f.read()
 
-    return CNF(from_string=content.decode("utf-8"))
+    formula = CNF(from_string=content.decode("utf-8"))
+    formula.clauses = formula.clauses[:-2]
+
+    return formula

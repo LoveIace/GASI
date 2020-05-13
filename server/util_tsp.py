@@ -32,7 +32,10 @@ def to_inv(perm):
 
 # ...............................................................................
 def euclidean_distance(a, b):
-    return math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2) if a!=b else 0
+    sum = 0
+    for x,y in zip(a, b):
+        sum += (x - y) ** 2
+    return math.sqrt(sum)
 
 # ...............................................................................
 # split tour into subtours based on list of edge indices to remove
@@ -81,10 +84,10 @@ def realign(tour, first=1):
 # k - length of subtour to mutate
 # shift - number to shift subtour by
 # inverse - invert subtour
-def relocate(tour, k, shift=0, inverse=False):
+def relocate(tour, k, shift=0, invert=False):
     start_index = random.randrange(len(tour))
     realign(tour, tour[start_index])
-    tour[:] = tour[k:k+shift] + (tour[:k][::-1] if inverse else tour[:k]) + tour[k+shift:]
+    tour[:] = tour[k:k+shift] + (tour[:k][::-1] if invert else tour[:k]) + tour[k+shift:]
     realign(tour)
 
 # ...............................................................................
@@ -225,10 +228,10 @@ def try_invert(tour, distance_matrix, total = 0, last = -1, k = 0):
 # ...............................................................................
 def k_opt(tour, k, distance_matrix):
     # pick k random edges to delete from tour
-    deleted = sorted(random.sample(range(len(tour)), k))
+    to_delete = sorted(random.sample(range(len(tour)), k))
 
     # create list of subtours after deletion of k edges
-    subtours = split_by_indices(tour, deleted)
+    subtours = split_by_indices(tour, to_delete)
 
     # create list permutations of subtours (first index fixed to avoid cyclic repetitions)
     permutations = [

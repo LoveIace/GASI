@@ -5,7 +5,7 @@ import zoom from "chartjs-plugin-zoom";
 export default {
   extends: Scatter,
   mixins: [mixins.reactiveProp],
-  props: ["chartData"],
+  props: ["chartData", "display"],
   data() {
     return {
       options: {
@@ -21,29 +21,6 @@ export default {
         },
         legend: false,
         tooltips: false,
-        scales: {
-          //   xAxes: [
-          //     {
-          //       ticks: {
-          //         min: -5,
-          //         max: 5,
-          //       },
-          //       gridLines: {
-          //       }
-          //     }
-          //   ],
-          //   yAxes: [
-          //     {
-          //       ticks: {
-          //         min: -5,
-          //         max: 5,
-          //         padding: 10
-          //       },
-          //       gridLines: {
-          //       }
-          //     }
-          //   ]
-        },
         responsive: true,
         maintainAspectRatio: false,
         title: {
@@ -52,6 +29,14 @@ export default {
         }
       }
     };
+  },
+  watch:{
+    display(newval, oldval){
+      if (newval == oldval)
+        return
+      if(newval=="scatter")
+        this.renderChart(this.chartData, this.options);
+    }
   },
   mounted() {
     this.addPlugin(zoom);

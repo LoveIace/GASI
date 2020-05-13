@@ -50,7 +50,7 @@ def run_tsp():
         post_data = request.get_json()
         variables, problem = post_data['variables'], post_data['problem']
 
-        towns, optimum = TSP_PROBLEMS[problem]['points'], TSP_PROBLEMS[problem]['optimum']
+        towns, optimum = problem['points'], problem['optimum']
         tsp_problem = tsp.Travelling_Salesman(towns, optimum)
 
         if util.get_att("Algorithm", variables) == "genetic":
@@ -94,7 +94,6 @@ def run_tsp():
         return jsonify(response_object)
 
 #...............................................................................
-
 @app.route('/fe', methods=['GET', 'POST'])
 def run_fe():
     response_object = {'status':'success'}
@@ -104,6 +103,7 @@ def run_fe():
     else:
         post_data = request.get_json()
         variables, problem = post_data['variables'], post_data['problem']
+
         minimize = util_fe.get_problem_att(problem, "minimize")
         fe_problem = fe.Function_Extreme(problem.lower(), 2, minimize=minimize)
 
@@ -122,9 +122,11 @@ def run_fe():
                                 alpha=util.get_att("Alpha", variables),
                                 beta=util.get_att("Beta", variables),
                                 gamma=util.get_att("Gamma", variables),
+                                delta=util.get_att("Delta", variables),
                                 out_path=False)
-            
-        best_solution = util.get_min_overall(df) if minimize else util.get_max_overall(df)
+        min_value = util.get_min_overall(df)[-1]
+        max_value = util.get_max_overall(df)[-1]
+        best_solution = min_value if minimize else max_value
         response_object['labels'] = [i+1 for i in range(gen)]
         response_object['datasets'] = [
             {
@@ -138,7 +140,6 @@ def run_fe():
             }
         ]
         size = util.get_att("Population size", variables)
-        # normalized_data = util.normalize_coordinates(data, (-5,5), 1, 2)
         response_object['points'] = []
 
         for i in range(gen):
@@ -146,12 +147,18 @@ def run_fe():
             for j in range(size):
                 response_object['points'][i].append({'x':data[i*size+j][1], 'y':data[i*size+j][2]})
 
-        response_object['best_solution'] = best_solution[-1]
+        # print(util.get_distribution(data[-50:]))
+        response_object['distribution'] = []
+        response_object['dist_labels'] = ["" for _ in range(50)]
+        for i in range(gen):
+            y = util.get_distribution(data[i*size:i*size+size])
+            response_object['distribution'].append(y)
+        
+        response_object['best_solution'] = best_solution
 
         return jsonify(response_object)
 
 #...............................................................................
-
 @app.route('/sat', methods=['GET', 'POST'])
 def run_sat():
     response_object = {'status':'success'}
@@ -193,6 +200,5 @@ def run_sat():
         return jsonify(response_object)
 
 #...............................................................................
-
 if __name__ == '__main__':
     app.run()

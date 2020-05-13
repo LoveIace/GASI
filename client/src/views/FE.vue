@@ -5,21 +5,19 @@
         <!-- <h1 class="ma-3">Travelling Salesman problem</h1> -->
         <sidebar ref="sidebar" @run="run($event)" />
       </v-col>
-      <v-col cols="9">
+      <v-col cols="8">
         <v-row>
-          <v-col cols="4">
-            <fchart :chartData="scatterpoints"></fchart>
-            <v-sheet v-if="solution != null" max-width="300" class="mx-auto mt-3">
-              <p class="text-center">
-                max:
-                <b>{{this.max}}</b>
-              </p>
-              <p class="text-center">
-                min:
-                <b>{{this.min}}</b>
-              </p>
+          <v-col cols="6">
+            <fchart :display="display" :chartData="scatterpoints" v-show="display == 'scatter'"></fchart>
+            <dchart :display="display" :chartData="distpoints" v-show="display == 'dist'"></dchart>
+            <v-sheet class="mx-auto mt-3">
+              <v-btn-toggle v-model="display" mandatory color="primary" group>
+                <v-btn height="30" value="dist">Distribution</v-btn>
+                <v-btn height="30" value="scatter">Scatter</v-btn>
+              </v-btn-toggle>
               <v-slider
-                v-on:change="drawScatterGraph"
+                :disabled="solution == null"
+                v-on:change="drawGraph"
                 v-model="step"
                 :max="maxStep"
                 min="0"
@@ -65,7 +63,7 @@ import Sidebar from "@/components/Sidebar.vue";
 import LineChart from "@/components/LineChart.vue";
 import FireflyChart from "@/components/FireflyChart.vue";
 import ResultsCard from "@/components/ResultsCard.vue";
-// import ProblemBar from '@/components/ProblemBar.vue'
+import DistChart from "@/components/DistChart.vue";
 
 export default {
   name: "FE",
@@ -73,11 +71,12 @@ export default {
     sidebar: Sidebar,
     linechart: LineChart,
     fchart: FireflyChart,
-    results: ResultsCard
-    // pbar: ProblemBar
+    results: ResultsCard,
+    dchart: DistChart
   },
   data() {
     return {
+      display: "scatter",
       chosen_problem: {},
       problems: [],
       picked: false,
@@ -85,8 +84,11 @@ export default {
       scatterpoints: null,
       scatter_data: null,
       step: 0,
-      maxStep: 0,
+      maxStep: 50,
       datacollection: null,
+      dist_data: null,
+      dist_labels: null,
+      distpoints: null,
       min: NaN,
       max: NaN,
       solved_data: [],
@@ -108,13 +110,13 @@ export default {
     increment() {
       if (this.step < this.maxStep) {
         this.step++;
-        this.drawScatterGraph();
+        this.drawGraph();
       }
     },
     decrement() {
       if (this.step > 0) {
         this.step--;
-        this.drawScatterGraph();
+        this.drawGraph();
       }
     },
     run(variables) {
@@ -134,10 +136,12 @@ export default {
               return { ...ds, data: res.data.datasets[i].data };
             })
           };
+          this.dist_data = res.data.distribution;
+          this.dist_labels = res.data.dist_labels;
           this.scatter_data = res.data.points;
           this.step = 0;
           this.maxStep = res.data.points.length - 1;
-          this.drawScatterGraph();
+          this.drawGraph();
           this.solution = res.data.best_solution;
           this.$refs.sidebar.loading = false;
           entry.best = this.solution;
@@ -156,32 +160,45 @@ export default {
             label: "max",
             data: [],
             fill: "none",
-            borderColor: "#d18b19"
+            borderColor: "#4B4A5C"
           },
           {
             label: "mean",
             data: [],
             fill: "none",
-            borderColor: "#609e94"
+            borderColor: "#F0AD9E"
           },
           {
             label: "min",
             data: [],
             fill: "none",
-            borderColor: "#604280"
+            borderColor: "#9594AE"
           }
         ]
       };
     },
-    scatterGraph() {
+    distGraph(data = [], labels = []) {
+      return {
+        labels: labels,
+        datasets: [
+          {
+            label: "distribution",
+            data: data,
+            borderColor: "#4b4a5c",
+            backgroundColor: "#9594ae"
+          }
+        ]
+      };
+    },
+    scatterGraph(data = []) {
       return {
         datasets: [
           {
-            data: [],
+            data: data,
             borderWidth: 2,
-            pointBackgroundColor: "#1976D2",
-            borderColor: "#1976D2",
-            pointRadius: 2,
+            pointBackgroundColor: "#4b4a5c",
+            borderColor: "#9594ae",
+            pointRadius: 3,
             fill: false,
             tension: 0,
             showLine: false
@@ -189,19 +206,14 @@ export default {
         ]
       };
     },
-    drawScatterGraph() {
+    drawGraph() {
       this.min = this.datacollection.datasets[2].data[this.step];
       this.max = this.datacollection.datasets[0].data[this.step];
-
-      this.scatterpoints = {
-        ...this.scatterGraph(),
-        datasets: this.scatterGraph().datasets.map(ds => {
-          return {
-            ...ds,
-            data: this.scatter_data[this.step]
-          };
-        })
-      };
+      this.scatterpoints = this.scatterGraph(this.scatter_data[this.step]);
+      this.distpoints = this.distGraph(
+        this.dist_data[this.step],
+        this.dist_labels
+      );
     },
     getProblems() {
       const path = "http://localhost:5000/fe";
@@ -223,6 +235,7 @@ export default {
   mounted() {
     this.getProblems();
     this.scatterpoints = this.scatterGraph();
+    this.distpoints = this.distGraph();
   }
 };
 </script>

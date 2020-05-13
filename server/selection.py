@@ -30,32 +30,36 @@ def get_index_of_closest(arr, target):
     else:
         return find_closest(arr[mid], arr[mid + 1], target)
 
-def roulette(population, min_bound):
-    circumference = sum(individual.fitness +
-                        min_bound for individual in population)
+
+def roulette(population, pressure = 10):
+    min_bound = population[-1].fitness
+    max_bound = population[0].fitness
+
+    circumference = 0
+    pool = []
+    for i in population:
+        normalized_fitness = (((i.fitness - min_bound)/(max_bound - min_bound) + 1))**pressure
+        circumference += normalized_fitness
+        pool.append(normalized_fitness)
 
     while True:
         landing_spot = random.uniform(0, circumference)
 
         curr = 0
-        for individual in population:
-            curr += individual.fitness + min_bound
-            if curr >= landing_spot:
-                yield individual
+        for index, value in enumerate(pool):
+            curr+= value
+            if curr>=landing_spot:
+                yield population[index]
+                break
 
-
-def tournament(population, min_bound):
+def tournament(population):
     tournament_size = int(len(population) / 5)
 
     while True:
         tournament = random.sample(population, tournament_size)
-        # tournament = [
-        #     random.choice(population)
-        #     for _ in range(tournament_size)
-        # ]
         yield max(tournament, key=lambda participant: participant.fitness)
 
-def uniform(population, min_bound):
+def uniform(population):
     pool = [
         (index, individual.fitness)
         for index, individual in enumerate(population)

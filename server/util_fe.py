@@ -10,7 +10,6 @@ class Benchmark():
             self.optimum = get_problem_att(fn, 'minimum')
         else:
             self.optimum = get_problem_att(fn, 'maximum')
-        print(self.optimum)
         self.var_count = dim
         self.bounds = ndtestfunc.getbounds( fn, dim )
         self.name = fn
