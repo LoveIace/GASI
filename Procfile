@@ -1,2 +1,2 @@
+flask: python server/app.py
 web: cd client && npm run serve
-ser: cd server && python app.py

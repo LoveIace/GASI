@@ -1,5 +1,4 @@
 import random
-import kmeans1d
 from statistics import stdev
 
 def find_closest(val1, val2, target):

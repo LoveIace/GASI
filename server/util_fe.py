@@ -1,6 +1,4 @@
 import ndtestfunc
-import sympy
-import sys
 import util
 
 class Benchmark():

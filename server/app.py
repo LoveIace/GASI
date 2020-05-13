@@ -9,17 +9,9 @@ import util
 import util_tsp
 import util_fe
 import util_sat
-import inspect
-import cProfile
-import pandas
-import json
-import sys
-import time
-import numpy
 import pandas as pd
 from flask import Flask, jsonify, request, Response, stream_with_context
 from flask_cors import CORS
-
 
 # configuration
 # DEBUG = True
