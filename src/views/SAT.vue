@@ -120,7 +120,7 @@ export default {
         {}
       );
       entry.problem = this.chosen_problem.name;
-      const path = "http://localhost:5000/sat";
+      const path = "/sat";
       axios
         .post(path, { variables: variables, problem: this.chosen_problem.name })
         .then(res => {
@@ -193,7 +193,7 @@ export default {
       this.distpoints = this.distGraph(this.dist_data[this.step], this.dist_labels);
     },
     getProblems() {
-      const path = "http://localhost:5000/sat";
+      const path = "/sat";
       axios
         .get(path)
         .then(res => {

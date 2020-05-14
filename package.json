@@ -1,6 +1,9 @@
 {
   "name": "client",
   "version": "0.1.0",
+  "engines": {
+    "node":"v12.16.x"
+  },
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",

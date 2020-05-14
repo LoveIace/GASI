@@ -17,7 +17,9 @@ from flask_cors import CORS
 # DEBUG = True
 
 # instantiate the app
-app = Flask(__name__)
+app = Flask(__name__,
+            static_folder = "./dist",
+            template_folder = "./dist")
 app.config.from_object(__name__)
 
 # enable CORS
@@ -205,6 +207,14 @@ def run_sat():
 
 
         return jsonify(response_object)
+
+from flask import render_template
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    return render_template("index.html")
+
 
 #...............................................................................
 if __name__ == '__main__':
