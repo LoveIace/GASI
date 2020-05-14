@@ -165,7 +165,7 @@ def run_sat():
         post_data = request.get_json()
         minimize=False
         variables, problem = post_data['variables'], post_data['problem']
-        formula = util_sat.get_sat_problem('./sat_problems/'+problem)
+        formula = problem["formula"]
         sat_problem = sat.Satisfiability(formula)
         df, data, gen = genetic_algo(   sat_problem, 
                                         generation_ceiling=util.get_att("Generation ceiling", variables), 

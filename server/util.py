@@ -5,13 +5,14 @@ from selection import tournament, roulette, uniform
 from os import listdir
 from os.path import isfile, join
 import re
+import util_sat
 
 
 # ...............................................................................
-def load_sat_problems(path='./sat_problems/'):
+def load_sat_problems(path='./server/sat_problems/'):
     return sorted([
         {"name": f.split('.')[0],
-         "path":path+"/"+f,
+         "formula": util_sat.get_sat_problem(join(path, f)),
          "nv":int(re.findall("[0-9]+", f)[0]),
          "clauses":int(re.findall("[0-9]+", f)[1])}
         for f in listdir(path) if isfile(join(path, f))

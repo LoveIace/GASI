@@ -3,7 +3,7 @@ import tarfile
 import random
 
 def get_sat_problem(path):
-    tar = tarfile.open(path+".tar.gz", "r:gz")
+    tar = tarfile.open(path)
 
     f = tar.extractfile(random.choice(tar.getmembers()))
     content = f.read()
