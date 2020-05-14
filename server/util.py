@@ -7,9 +7,11 @@ from os.path import isfile, join
 import re
 import util_sat
 
+PATH = "./server/"
+
 
 # ...............................................................................
-def load_sat_problems(path='./server/sat_problems/'):
+def load_sat_problems(path=PATH+'sat_problems/'):
     return sorted([
         {"name": f.split('.')[0],
          "formula": util_sat.get_sat_problem(join(path, f)),
@@ -18,9 +20,8 @@ def load_sat_problems(path='./server/sat_problems/'):
         for f in listdir(path) if isfile(join(path, f))
     ], key=lambda x: x['nv'])
 
-
 # ...............................................................................
-def load_tsp_problems(path='./server/tsp_problems/'):
+def load_tsp_problems(path=PATH+'tsp_problems/'):
     problems = []
     for f in listdir(path):
         with open(join(path, f)) as fp:

@@ -18,8 +18,8 @@ from flask_cors import CORS
 
 # instantiate the app
 app = Flask(__name__,
-            static_folder = "./dist",
-            template_folder = "./dist")
+            static_folder = "../dist",
+            template_folder = "../dist")
 app.config.from_object(__name__)
 
 # enable CORS
