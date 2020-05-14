@@ -125,7 +125,7 @@ export default {
         {}
       );
       entry.problem = this.chosen_problem.name;
-      const path = "http://localhost:5000/fe";
+      const path = "/fe";
       axios
         .post(path, { variables: variables, problem: this.chosen_problem.name })
         .then(res => {
@@ -216,7 +216,7 @@ export default {
       );
     },
     getProblems() {
-      const path = "http://localhost:5000/fe";
+      const path = "/fe";
       axios
         .get(path)
         .then(res => {
