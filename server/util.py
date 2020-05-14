@@ -19,7 +19,7 @@ def load_sat_problems(path='./sat_problems/'):
 
 
 # ...............................................................................
-def load_tsp_problems(path='./tsp_problems/'):
+def load_tsp_problems(path='./server/tsp_problems/'):
     problems = []
     for f in listdir(path):
         with open(join(path, f)) as fp:
