@@ -1,18 +1,21 @@
 import random
 import util_tsp
 
+#...............................................................................
 def uniform_discrete_crossover(a_genotype, b_genotype, a_weight = 1, b_weight = 1):
     return [
         a if random.random() < a_weight/(a_weight + b_weight) else b
         for a,b in zip(a_genotype, b_genotype)
     ]
 
+#...............................................................................
 def uniform_continuous_crossover(a_genotype, b_genotype, a_weight = 1, b_weight = 1):
     return [
         (a*a_weight+b*b_weight)/(a_weight+b_weight)
         for a,b in zip(a_genotype, b_genotype)
     ]
 
+#...............................................................................
 def k_point_crossover(a_genotype, b_genotype, k):
     length = len(a_genotype)
     if k >= length:
@@ -30,6 +33,8 @@ def k_point_crossover(a_genotype, b_genotype, k):
 
     return result
 
+#...............................................................................
+# partial match crossover
 def pmx(a_genotype, b_genotype, a_weight=None, b_weight=None):
     length = len(a_genotype)
 
@@ -47,6 +52,8 @@ def pmx(a_genotype, b_genotype, a_weight=None, b_weight=None):
 
     return result
 
+#...............................................................................
+# k point version of partial match crossover
 def k_point_pmx(a_genotype, b_genotype, k):
     length = len(a_genotype)
     crossover_points = sorted(random.sample(range(1,length), k)) + [length]

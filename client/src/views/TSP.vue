@@ -166,7 +166,7 @@ export default {
       this.$refs.sidebar.problem_picked = true;
     },
     getProblems() {
-      const path = "/tsp";
+      const path = "http://localhost:5000/tsp";
       axios
         .get(path)
         .then(res => {

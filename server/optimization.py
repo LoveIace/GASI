@@ -47,6 +47,7 @@ def firefly_algo(problem, population_size = 20, iteration_ceiling = 50, alpha = 
         if problem.is_solved(best.brightness):
             iter_count+=1
             return
+        # best firefly searches locally
         best.random_walk(alpha)
 
         # update alpha value, increase iteration counter
@@ -59,7 +60,7 @@ def firefly_algo(problem, population_size = 20, iteration_ceiling = 50, alpha = 
         df.to_csv(out_path, index=False, header=['generation']+problem.values()+['fitness']) 
         print("Dataset exported")
 
-    return pandas.DataFrame(data), data, iter_count
+    return pandas.DataFrame(data), data, iter_count-1
 
 
 
@@ -73,7 +74,6 @@ def genetic_algo(problem, population_size = 50, generation_ceiling = 25, select 
     # iterate generations
     while generation_num <= generation_ceiling: 
         min_val = float('inf')
-        print(generation_num)
 
         # evaluate fitness of each individual in current population, add to dataset
         for individual in population:
@@ -117,4 +117,4 @@ def genetic_algo(problem, population_size = 50, generation_ceiling = 25, select 
         df.to_csv(out_path, index=False, header=['generation']+problem.df_headers()+['fitness']) 
         print("Dataset exported")
 
-    return pandas.DataFrame(data), data, generation_num
+    return pandas.DataFrame(data), data, generation_num-1

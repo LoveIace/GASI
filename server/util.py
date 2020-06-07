@@ -5,7 +5,8 @@ from selection import tournament, roulette, uniform
 from os import listdir
 from os.path import isfile, join
 import re
-import util_sat
+from pysat.formula import CNF
+import tarfile
 
 PATH = "./server/"
 
@@ -14,11 +15,22 @@ PATH = "./server/"
 def load_sat_problems(path=PATH+'sat_problems/'):
     return sorted([
         {"name": f.split('.')[0],
-         "formula": util_sat.get_sat_problem(join(path, f)),
          "nv":int(re.findall("[0-9]+", f)[0]),
          "clauses":int(re.findall("[0-9]+", f)[1])}
         for f in listdir(path) if isfile(join(path, f))
     ], key=lambda x: x['nv'])
+
+def get_sat_problem(name):
+    path = PATH+'sat_problems/'+name+".tar.gz"
+    tar = tarfile.open(path)
+
+    f = tar.extractfile(random.choice(tar.getmembers()))
+    content = f.read()
+
+    formula = CNF(from_string=content.decode("utf-8"))
+    formula.clauses = formula.clauses[:-2]
+
+    return formula
 
 # ...............................................................................
 def load_tsp_problems(path=PATH+'tsp_problems/'):
@@ -44,7 +56,7 @@ def load_tsp_problems(path=PATH+'tsp_problems/'):
 
 # ...............................................................................
 
-
+# ISSUES WITH FITNESS DISTRIBUTION COMPUTATION OF SOME FUNCTIONS
 def load_fe_problems():
     return [
         {"name": "Ackley", "minimize": True, "minimum": 4.440892098500626e-16,
@@ -58,7 +70,7 @@ def load_fe_problems():
         {"name": "Levy", "minimize": True, "minimum": 0,
             "maximum": None, "func": "f(x)="},
         {"name": "Michalewicz", "minimize": True,
-            "minimum": -1.9, "maximum": None, "func": "f(x)="},
+            "minimum": -1.87, "maximum": None, "func": "f(x)="},
         {"name": "Nesterov", "minimize": True,
             "minimum": None, "maximum": None, "func": "f(x)="},
         {"name": "Perm", "minimize": True, "minimum": 0,
@@ -66,7 +78,7 @@ def load_fe_problems():
         {"name": "Powell", "minimize": True, "minimum": 0,
             "maximum": None, "func": "f(x)="},
         {"name": "Powersum", "minimize": False,
-            "minimum": None, "maximum": None, "func": "f(x)="},
+            "minimum": None, "maximum": 388, "func": "f(x)="},
         {"name": "Rastrigin", "minimize": True,
             "minimum": 0, "maximum": None, "func": "f(x)="},
         {"name": "Rosenbrock", "minimize": True,
@@ -75,18 +87,19 @@ def load_fe_problems():
             "minimum": 0, "maximum": None, "func": "f(x)="},
         {"name": "Sphere", "minimize": True, "minimum": 0,
             "maximum": None, "func": "f(x)="},
-        {"name": "Saddle", "minimize": True, "minimum": None,
+        # {"name": "Saddle", "minimize": True, "minimum": None,
+        #     "maximum": None, "func": "f(x)="},
+        # {"name": "Sum2", "minimize": True, "minimum": 0,
+        #     "maximum": None, "func": "f(x)="},
+        {"name": "Trid", "minimize": True, "minimum": -2,
             "maximum": None, "func": "f(x)="},
-        {"name": "Sum2", "minimize": False, "minimum": None,
-            "maximum": None, "func": "f(x)="},
-        {"name": "Trid", "minimize": True, "minimum": None,
-            "maximum": None, "func": "f(x)="},
-        {"name": "Zakharov", "minimize": True,
-            "minimum": 0, "maximum": None, "func": "f(x)="}
+        # {"name": "Zakharov", "minimize": True,
+        #     "minimum": 0, "maximum": None, "func": "f(x)="}
     ]
 
 
 # ...............................................................................
+# get attribute for algorithm from json data
 def get_att(att, data):
     selections = {
         "Tournament": tournament,
@@ -103,7 +116,7 @@ def get_att(att, data):
 
 # ...............................................................................
 
-
+# get minimum / maximum / mean fitness values for each generation
 def get_min(df):
     df_min = df.groupby(df.columns[0]).min()
     return df_min.iloc[:, -1].tolist()
@@ -120,7 +133,7 @@ def get_max(df):
 
 # ...............................................................................
 
-
+# get optima reached by algortihm
 def get_min_overall(df):
     return df.iloc[df.iloc[:, -1].idxmin()].tolist()
 
@@ -130,6 +143,7 @@ def get_max_overall(df):
 
 
 # ...............................................................................
+# normalize tsp coordinates to range
 def normalize_coordinates(points, range, x=0, y=1):
     swapped = numpy.swapaxes(points, 0, 1)
     min_x, max_x = min(swapped[x]), max(swapped[x])
@@ -144,20 +158,25 @@ def normalize_coordinates(points, range, x=0, y=1):
 
 
 # ...............................................................................
+# get the fitness/brightness distribution of a generation
+# if normalization boundaries are not given, compute from generation
 def get_distribution(data, min_=None, max_=None):
     from scipy.stats import gaussian_kde
     from statistics import stdev
-    
+
     values = [row[-1] for row in data]
+
+    if values[1:] == values[:-1]:
+        return [1 for _ in range(50)]
 
     if min_==None:
         min_ = min(values)
     if max_==None:
         max_ = max(values)
 
-    sd = abs(stdev(values))
-    min_ -= sd
-    max_ += sd
+    eps = sum([val for val in values])
+    min_ -= eps/4
+    max_ += eps/4
 
     kde = gaussian_kde(values)
     return kde.evaluate(numpy.linspace(min_, max_, 50)).tolist()

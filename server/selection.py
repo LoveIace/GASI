@@ -1,6 +1,8 @@
 import random
 from statistics import stdev
 
+# ...............................................................................
+# util functions for uniform select
 def find_closest(val1, val2, target):
     return val2[0] if target - val1[1] >= val2[1] - target else val1[0]
 
@@ -29,11 +31,14 @@ def get_index_of_closest(arr, target):
     else:
         return find_closest(arr[mid], arr[mid + 1], target)
 
-
+# ...............................................................................
+# roulette selection, generator method
 def roulette(population, pressure = 10):
+    # get maximum/minimum fitness of generation
     min_bound = population[-1].fitness
     max_bound = population[0].fitness
 
+    # compute circumference of normalized data
     circumference = 0
     pool = []
     for i in population:
@@ -41,6 +46,7 @@ def roulette(population, pressure = 10):
         circumference += normalized_fitness
         pool.append(normalized_fitness)
 
+    # yield parents
     while True:
         landing_spot = random.uniform(0, circumference)
 
@@ -51,23 +57,32 @@ def roulette(population, pressure = 10):
                 yield population[index]
                 break
 
+# ...............................................................................
+# tournament selection, generator method
 def tournament(population):
     tournament_size = int(len(population) / 5)
 
+    # yield parents
     while True:
         tournament = random.sample(population, tournament_size)
         yield max(tournament, key=lambda participant: participant.fitness)
 
+
+# ...............................................................................
+# uniform selection, generator method
 def uniform(population):
+    # create pool of fitness values
     pool = [
         (index, individual.fitness)
         for index, individual in enumerate(population)
     ]
     pool.sort(key=lambda x:x[1])
 
+    # get min max
     fmin, fmax = pool[0][1], pool[-1][1]
     epsilon = stdev([i[1] for i in pool])
 
+    # pick a random value, choose parent closest to said value
     while True:
         value = random.uniform(fmin-epsilon/2, fmax+epsilon/2)
         index = get_index_of_closest(pool, value)

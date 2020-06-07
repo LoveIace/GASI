@@ -8,25 +8,21 @@ from selection import tournament, roulette, uniform
 import util
 import util_tsp
 import util_fe
-import util_sat
 import pandas as pd
 from flask import Flask, jsonify, request, Response, stream_with_context
 from flask_cors import CORS
 
 # configuration
-# DEBUG = True
+DEBUG = True
 
 # instantiate the app
-app = Flask(__name__,
-            static_folder = "../dist",
-            template_folder = "../dist")
+app = Flask(__name__)
 app.config.from_object(__name__)
 
 # enable CORS
 CORS(app, resources={r'/*': {'origins': '*'}})
 
 #...............................................................................
-
 # Load all problems at server startup
 TSP_PROBLEMS = util.load_tsp_problems()
 FE_PROBLEMS = util.load_fe_problems()
@@ -34,6 +30,7 @@ SAT_PROBLEMS = util.load_sat_problems()
 
 
 #...............................................................................
+# solve tsp problem chosen by client
 @app.route('/tsp', methods=['GET', 'POST'])
 def run_tsp():
     response_object = {'status':'success'}
@@ -88,6 +85,7 @@ def run_tsp():
         return jsonify(response_object)
 
 #...............................................................................
+# solve fe problem chosen by client
 @app.route('/fe', methods=['GET', 'POST'])
 def run_fe():
     response_object = {'status':'success'}
@@ -118,6 +116,7 @@ def run_fe():
                                 gamma=util.get_att("Gamma", variables),
                                 delta=util.get_att("Delta", variables),
                                 out_path=False)
+
         min_value = util.get_min_overall(df)[-1]
         max_value = util.get_max_overall(df)[-1]
         best_solution = min_value if minimize else max_value
@@ -137,7 +136,7 @@ def run_fe():
 
         # point data for each individual
         response_object['points'] = []
-        for i in range(gen-1):
+        for i in range(gen):
             response_object['points'].append([])
             for j in range(size):
                 response_object['points'][i].append({'x':data[i*size+j][1], 'y':data[i*size+j][2]})
@@ -145,7 +144,7 @@ def run_fe():
         # fitness distribution for each generation
         response_object['distribution'] = []
         response_object['dist_labels'] = ["" for _ in range(50)]
-        for i in range(gen-1):
+        for i in range(gen):
             chunk = data[i*size:i*size+size]
             distribution = util.get_distribution(chunk)
             response_object['distribution'].append(distribution)
@@ -155,6 +154,7 @@ def run_fe():
         return jsonify(response_object)
 
 #...............................................................................
+# solve sat problem chosen by client
 @app.route('/sat', methods=['GET', 'POST'])
 def run_sat():
     response_object = {'status':'success'}
@@ -165,7 +165,7 @@ def run_sat():
         post_data = request.get_json()
         minimize=False
         variables, problem = post_data['variables'], post_data['problem']
-        formula = problem["formula"]
+        formula = util.get_sat_problem(problem)
         sat_problem = sat.Satisfiability(formula)
         df, data, gen = genetic_algo(   sat_problem, 
                                         generation_ceiling=util.get_att("Generation ceiling", variables), 
@@ -196,7 +196,7 @@ def run_sat():
         # fitness distribution for each generation
         response_object['distribution'] = []
         response_object['dist_labels'] = ["" for _ in range(50)]
-        for i in range(gen-1):
+        for i in range(gen):
             chunk = data[i*size:i*size+size]
             distribution = util.get_distribution(chunk, min_value, max_value)
             response_object['distribution'].append(distribution)
@@ -207,14 +207,6 @@ def run_sat():
 
 
         return jsonify(response_object)
-
-from flask import render_template
-
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def catch_all(path):
-    return render_template("index.html")
-
 
 #...............................................................................
 if __name__ == '__main__':
